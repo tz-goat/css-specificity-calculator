@@ -1,0 +1,164 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="priority-simulator">
+        <div class="editor">
+          <!-- 代码编辑器区域 -->
+          <div class="demo-html">
+            <pre><code>
+&lt;div class="container"&gt;
+    &lt;header id="header"&gt;
+        &lt;nav class="nav-main"&gt;
+            &lt;ul class="menu"&gt;
+                &lt;li class="menu-item active"&gt;首页&lt;/li&gt;
+                &lt;li class="menu-item"&gt;关于&lt;/li&gt;
+            &lt;/ul&gt;
+        &lt;/nav&gt;
+    &lt;/header&gt;
+    &lt;main class="content"&gt;
+        &lt;article class="post"&gt;
+            &lt;h1 class="title"&gt;文章标题&lt;/h1&gt;
+            &lt;p class="text"&gt;文章内容&lt;/p&gt;
+        &lt;/article&gt;
+    &lt;/main&gt;
+&lt;/div&gt;
+            </code></pre>
+          </div>
+          
+          
+        </div>
+        <div class="visualization">
+          <!-- 可视化展示区 -->
+          <canvas id="priority-canvas"></canvas>
+        </div>
+        <!-- 新增布局演示区域 -->
+        <div class="layout-demo">
+            <div class="input-controls">
+                <button onclick="addNewInput()">添加新输入框</button>
+                <button onclick="parseSpecificity()">计算优先级</button>
+            </div>
+            <div class="layout-controls">
+                <button onclick="switchLayout('grid')">Grid布局</button>
+                <button onclick="switchLayout('flex')">Flex布局</button>
+                <button onclick="switchLayout('float')">Float布局</button>
+            </div>
+            <div class="layout-container">
+                <!-- 布局演示内容 -->
+                <input id="css-input" class="css-input" /></div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="index.js"></script>
+<style>
+    .priority-simulator {
+        display: grid;
+        grid-template-columns: 50% 50%;
+    }
+    .visualization{
+        background-color: yellowgreen;
+    }
+    .editor {
+        grid-column: 1;
+    }
+    .visualization {
+        grid-column: 2;
+    }
+    
+    .demo-html {
+        background-color: #f5f5f5;
+        border-radius: 4px;
+        padding: 15px;
+        margin-bottom: 15px;
+        font-family: monospace;
+    }
+    
+    .demo-html pre {
+        margin: 0;
+        white-space: pre-wrap;
+    }
+    
+    input.css-input {
+        margin: 10px 0;
+        padding: 8px;
+        font-family: monospace;
+    }
+    .input-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        /* gap: 10px; */
+    }
+    
+    button {
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    button:hover {
+        background-color: #45a049;
+    }
+
+    .visualization canvas {
+        width: 100%;
+        border: 1px solid #ccc;
+        background-color: white;
+    }
+
+    /* 布局演示区域样式 */
+    .layout-demo {
+        grid-column: 1 / -1;  /* 占据整行 */
+        margin-top: 20px;
+        padding: 20px;
+        background: #f5f5f5;
+    }
+
+    .input-controls {
+        margin-bottom: 10px;
+    }
+    /* Grid布局 */
+    .layout-container.grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-areas: 
+            "header header header"
+            "sidebar main main"
+            "footer footer footer";
+        gap: 10px;
+    }
+
+    /* Flex布局 */
+    .layout-container.flex {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    /* Float布局 */
+    .layout-container.float::after {
+        content: '';
+        display: block;
+        clear: both;
+    }
+    .layout-container.float .css-input {
+        float: left;
+        width: calc(33.33% - 10px);
+        margin: 5px;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+        .priority-simulator {
+            grid-template-columns: 1fr;
+        }
+        
+    }
+</style>
+</html>
