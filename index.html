@@ -34,6 +34,7 @@
         <div class="visualization">
           <!-- 可视化展示区 -->
           <canvas id="priority-canvas"></canvas>
+          <div id="tooltip" class="tooltip"></div>
         </div>
         <!-- 新增布局演示区域 -->
         <div class="layout-demo">
@@ -46,7 +47,7 @@
                 <button onclick="switchLayout('flex')">Flex布局</button>
                 <button onclick="switchLayout('float')">Float布局</button>
             </div>
-            <div class="layout-container">
+            <div class="layout-container grid">
                 <!-- 布局演示内容 -->
                 <input id="css-input" class="css-input" /></div>
             </div>
@@ -59,14 +60,12 @@
         display: grid;
         grid-template-columns: 50% 50%;
     }
-    .visualization{
-        background-color: yellowgreen;
-    }
     .editor {
         grid-column: 1;
     }
     .visualization {
         grid-column: 2;
+        position: relative;
     }
     
     .demo-html {
@@ -159,6 +158,20 @@
             grid-template-columns: 1fr;
         }
         
+    }
+    
+    .tooltip {
+        position: absolute;
+        display: none;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        z-index: 100;
+        transform: translate(-50%, -100%);
+        white-space: nowrap;
     }
 </style>
 </html>

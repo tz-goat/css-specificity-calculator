@@ -8,6 +8,13 @@ const REG_PARTS = {
     ATTRIBUTE: '\\[[^\\]]+\\]'
 };
 
+/**
+ * 动画帧率相关常量
+ * FRAME_TIME: 基于60fps计算的每帧时间（1000ms / 60fps ≈ 16.67ms）
+ * 用于限制鼠标移动事件的触发频率，确保平滑的动画效果
+ */
+const FRAME_TIME = 16;
+
 function parseCSSSpecificity(cssText) {
     const specificity = {
         a: 0, // ID选择器
@@ -113,38 +120,200 @@ function displaySpecificity(specificityList) {
     }
 }
 
+// 在drawComparison函数外部添加全局变量存储柱状图位置信息
+let barPositions = [];
+
 function drawComparison(selectors) {
+    /**
+     * 1. 画布初始化设置
+     * 设置画布尺寸和设备像素比，确保在高DPI设备上清晰显示
+     */
     const canvas = document.getElementById('priority-canvas');
     const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const parentWidth = canvas.parentElement.getBoundingClientRect().width;
+    canvas.style.width = parentWidth + 'px';
+    canvas.style.height = '400px';
+    canvas.width = parentWidth * dpr;
+    canvas.height = 400 * dpr;
+    ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-    selectors.forEach(({ selector, specificity }, index) => {
-      const x = index * 120 + 30;
-      // 绘制三维柱状图
-      draw3DBar(ctx, x, 100, {
-        height: specificity.a * 30,
-        color: '#FF6B6B',
-        label: `ID (${specificity.a})`
-      });
-      
-      draw3DBar(ctx, x + 30, 100, {
-        height: specificity.b * 30,
-        color: '#4ECDC4',
-        label: `Class (${specificity.b})`
-      });
-  
-      draw3DBar(ctx, x + 60, 100, {
-        height: specificity.c * 30,
-        color: '#45B7D1',
-        label: `Element (${specificity.c})`
-      });
-  
-      // 绘制选择器文本
-      ctx.fillStyle = '#2d3436';
-      ctx.textAlign = 'center';
-      ctx.fillText(selector, x + 45, 250);
+    
+    /**
+     * 2. 图表布局定义
+     * 设置图表的边距和实际绘图区域
+     */
+    const margin = { top: 40, right: 20, bottom: 40, left: 40 };
+    const width = canvas.width / dpr - margin.left - margin.right;
+    console.log({width});
+    const height = canvas.height / dpr - margin.top - margin.bottom;
+    
+    /**
+     * 3. 坐标轴绘制
+     * 创建基本的L形坐标系
+     */
+    ctx.beginPath();
+    ctx.moveTo(margin.left, margin.top);
+    ctx.lineTo(margin.left, height + margin.top);
+    ctx.lineTo(width + margin.left, height + margin.top);
+    ctx.strokeStyle = '#333';
+    ctx.stroke();
+    
+    /**
+     * 4. 数据比例计算
+     * 计算权重的最大值和缩放比例
+     */
+    const maxWeight = Math.max(...selectors.map(
+        s => s.specificity.a * 100 + s.specificity.b * 10 + s.specificity.c
+    ));
+
+    const gap = 20; 
+    // 根据总个数计算单个柱子的最大可用宽度
+    const remainingWidth = width - margin.right - (selectors.length - 1) * gap;
+    const barWidth = Math.min(80, remainingWidth / selectors.length);
+
+    const scale = height / (maxWeight || 1);
+    
+    /**
+     * 5. 柱状图绘制
+     * 为每个选择器绘制堆叠的权重条形图
+     */
+    selectors.forEach((item, index) => {
+        const offset = 5;
+        const x = margin.left + (barWidth + gap) * index + offset;
+        let y = height + margin.top;
+        
+        // 存储每个柱状图的位置信息
+        barPositions.push({
+            x,
+            y,
+            width: barWidth,
+            height: height,
+            specificity: item.specificity,
+            selector: item.selector
+        });
+        
+        // 5.1 绘制元素选择器部分 (c)
+        if (item.specificity.c > 0) {
+            const h = item.specificity.c * scale;
+            ctx.fillStyle = '#45B7D1';
+            ctx.fillRect(x, y - h, barWidth, h);
+            y -= h;
+        }
+        
+        // 5.2 绘制类选择器部分 (b)
+        if (item.specificity.b > 0) {
+            const h = item.specificity.b * 10 * scale;
+            ctx.fillStyle = '#4ECDC4';
+            ctx.fillRect(x, y - h, barWidth, h);
+            y -= h;
+        }
+        
+        // 5.3 绘制ID选择器部分 (a)
+        if (item.specificity.a > 0) {
+            const h = item.specificity.a * 100 * scale;
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(x, y - h, barWidth, h);
+        }
+        
+        /**
+         * 6. 文本标签绘制
+         * 添加选择器名称
+         */
+        // 6.1 选择器名称（倾斜显示）
+        ctx.save();
+        ctx.translate(x + barWidth/2, height + margin.top + 20);
+        ctx.rotate(-Math.PI/4);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#2d3436';
+        ctx.fillText(item.selector, 0, 0);
+        ctx.restore();
     });
-  }
+    
+    /**
+     * 7. 图例绘制
+     * 添加颜色说明图例
+     */
+    const legendX = margin.left;
+    const legendY = margin.top - 30;
+    const legendSpacing = 120;
+    
+    // 7.1 ID选择器图例
+    ctx.fillStyle = '#FF6B6B';
+    ctx.fillRect(legendX, legendY, 15, 15);
+    ctx.fillStyle = '#2d3436';
+    ctx.textAlign = 'left';
+    ctx.fillText('ID (×100)', legendX + 20, legendY + 12);
+    
+    // 7.2 类选择器图例
+    ctx.fillStyle = '#4ECDC4';
+    ctx.fillRect(legendX + legendSpacing, legendY, 15, 15);
+    ctx.fillStyle = '#2d3436';
+    ctx.fillText('Class (×10)', legendX + legendSpacing + 20, legendY + 12);
+    
+    // 7.3 元素选择器图例
+    ctx.fillStyle = '#45B7D1';
+    ctx.fillRect(legendX + legendSpacing * 2, legendY, 15, 15);
+    ctx.fillStyle = '#2d3436';
+    ctx.fillText('Element (×1)', legendX + legendSpacing * 2 + 20, legendY + 12);
+}
+
+let currentBar = null;
+
+function handleMouseMove(event) {
+    const canvas = document.getElementById('priority-canvas');
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    
+    // 只在必要时更新
+    const bar = barPositions.find(bar => 
+        x >= bar.x && 
+        x <= bar.x + bar.width && 
+        y >= bar.y - bar.height && 
+        y <= bar.y
+    );
+    
+    if (bar !== currentBar) {  // 只在状态改变时更新
+        currentBar = bar;
+        updateTooltip(event, bar);
+    } else if (bar) {  // 如果在同一个bar内移动，只更新位置
+        updateTooltipPosition(event);
+    }
+}
+
+function updateTooltip(event, bar) {
+    const tooltip = document.getElementById('tooltip');
+    if (bar) {
+        tooltip.style.display = 'block';
+        tooltip.textContent = `${bar.specificity.a},${bar.specificity.b},${bar.specificity.c}`;
+        updateTooltipPosition(event);
+    } else {
+        tooltip.style.display = 'none';
+    }
+}
+
+function updateTooltipPosition(event) {
+    const tooltip = document.getElementById('tooltip');
+    const canvas = document.getElementById('priority-canvas');
+    const visualizationRect = canvas.parentElement.getBoundingClientRect();
+    const relativeX = event.clientX - visualizationRect.left;
+    const relativeY = event.clientY - visualizationRect.top;
+    
+    tooltip.style.left = `${relativeX}px`;
+    tooltip.style.top = `${relativeY}px`;
+}
+
+function throttle(func, limit) {
+    let inThrottle;
+    return function(...args) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
 
 function parseSpecificity() {
     const inputList = document.querySelectorAll('.css-input');
@@ -178,16 +347,16 @@ function addNewInput() {
 // 页面加载完成后自动运行一次
 if(typeof window !== 'undefined') {
     window.onload = function() {
-        // 设置一个默认值
         document.getElementById('css-input').value = '.box';
         parseSpecificity();
+        
+        const canvas = document.getElementById('priority-canvas');
+        // 使用常量控制节流时间
+        canvas.addEventListener('mousemove', throttle(handleMouseMove, FRAME_TIME));
     };
 }
 
-// 添加模块导出
-module.exports = {
-    parseCSSSpecificity
-};
+
 
 function visualizeSelectorTree(selector) {
     const parts = selector.split(/\s+/);
@@ -304,3 +473,8 @@ function darkenColor(color, percent) {
         (B > 0 ? B : 0)
     ).toString(16).slice(1);
 }
+
+// 添加模块导出
+module.exports = {
+    parseCSSSpecificity
+};
